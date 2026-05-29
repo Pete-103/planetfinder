@@ -1,0 +1,54 @@
+olevba 0.60.2 on Python 3.14.3 - http://decalage.info/python/oletools
+===============================================================================
+FILE: PlanetFinder.xlsm
+Type: OpenXML
+WARNING  For now, VBA stomping cannot be detected for files in memory
+-------------------------------------------------------------------------------
+VBA MACRO ThisWorkbook.cls 
+in file: xl/vbaProject.bin - OLE stream: 'VBA/ThisWorkbook'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Private Sub Workbook_Open()
+
+    ThisWorkbook.Sheets("Planets").Range("C2").Value = ThisWorkbook.Sheets("Planets").Range("B3").Value
+    ThisWorkbook.Sheets("Planets").Range("D2").Value = ThisWorkbook.Sheets("Planets").Range("B4").Value
+
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO Sheet2.cls 
+in file: xl/vbaProject.bin - OLE stream: 'VBA/Sheet2'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Private Sub DecreaseDate_Click()
+
+    ThisWorkbook.Sheets("Planets").Range("C2").Value = ThisWorkbook.Sheets("Planets").Range("C2").Value - 1
+
+End Sub
+
+Private Sub DecreaseTime_Click()
+
+    ThisWorkbook.Sheets("Planets").Range("D2").Value = ThisWorkbook.Sheets("Planets").Range("D2").Value - 0.00347222222
+
+End Sub
+
+Private Sub IncreaseDate_Click()
+
+    ThisWorkbook.Sheets("Planets").Range("C2").Value = ThisWorkbook.Sheets("Planets").Range("C2").Value + 1
+
+End Sub
+
+
+Private Sub IncreaseTime_Click()
+
+    ThisWorkbook.Sheets("Planets").Range("D2").Value = ThisWorkbook.Sheets("Planets").Range("D2").Value + 0.00347222222
+
+End Sub
++----------+--------------------+---------------------------------------------+
+|Type      |Keyword             |Description                                  |
++----------+--------------------+---------------------------------------------+
+|AutoExec  |Workbook_Open       |Runs when the Excel Workbook is opened       |
+|AutoExec  |DecreaseDate_Click  |Runs when the file is opened and ActiveX     |
+|          |                    |objects trigger events                       |
+|Suspicious|Hex Strings         |Hex-encoded strings were detected, may be    |
+|          |                    |used to obfuscate strings (option --decode to|
+|          |                    |see all)                                     |
++----------+--------------------+---------------------------------------------+
+
