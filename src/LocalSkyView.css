@@ -1,0 +1,149 @@
+.local-sky-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem 0;
+  width: 100%;
+}
+
+.local-sky-map {
+  position: relative;
+  width: 400px;
+  height: 400px;
+  background-color: #0b1a30;
+  border-radius: 50%;
+  border: 2px solid #3b6099;
+  box-shadow: 0 0 30px rgba(59, 96, 153, 0.4);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+@media (max-width: 500px) {
+  .local-sky-map {
+    width: 300px;
+    height: 300px;
+  }
+}
+
+.alt-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.alt-0 {
+  width: 100%;
+  height: 100%;
+  border: none; /* The container border handles this */
+}
+
+.alt-30 {
+  width: 66.66%;
+  height: 66.66%;
+}
+
+.alt-60 {
+  width: 33.33%;
+  height: 33.33%;
+}
+
+.zenith-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.zenith-crosshair::before,
+.zenith-crosshair::after {
+  content: '';
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.zenith-crosshair::before {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+
+.zenith-crosshair::after {
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+}
+
+.compass-rose {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.compass-rose span {
+  position: absolute;
+  color: #88aadd;
+  font-weight: bold;
+  font-size: 1.2rem;
+  text-shadow: 0 0 5px rgba(0,0,0,0.8);
+}
+
+.compass-n { top: 10px; left: 50%; transform: translateX(-50%); }
+.compass-e { top: 50%; right: 10px; transform: translateY(-50%); }
+.compass-s { bottom: 10px; left: 50%; transform: translateX(-50%); }
+.compass-w { top: 50%; left: 10px; transform: translateY(-50%); }
+
+.local-planet {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.local-planet:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+  z-index: 20;
+}
+
+.planet-icon-small {
+  width: 24px;
+  height: 24px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.planet-label {
+  color: #fff;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.legend {
+  text-align: center;
+  color: #a0c0f0;
+  font-size: 0.9rem;
+}
+
+.legend p {
+  margin: 5px 0;
+}

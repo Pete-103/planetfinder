@@ -42,7 +42,7 @@ export const PLANET_DATA = {
 };
 
 
-export function calculatePlanetPositions(date) {
+export function calculatePlanetPositions(date, lat = 0, lon = 0) {
     const J2000 = new Date(Date.UTC(2000, 0, 1, 11, 58, 55, 816));
     const JD_2000 = 2451545.0;
     
@@ -106,26 +106,71 @@ export function calculatePlanetPositions(date) {
         results[planet].zeq = zeq;
     }
     
-    // Geocentric coordinates
+    // Geocentric coordinates and local horizon calculations
     const earth = results['Earth'];
+    
+    // Add Sun geocentric position (inverse of Earth heliocentric)
+    results['Sun'] = {
+        geocentric: {
+            xgeo: -earth.xeq,
+            ygeo: -earth.yeq,
+            zgeo: -earth.zeq
+        }
+    };
+    
+    // Calculate Local Sidereal Time (LST)
+    const GST = 280.46061837 + 360.98564736629 * diffDays;
+    let LST_deg = (GST + lon) % 360;
+    if (LST_deg < 0) LST_deg += 360;
+    const lat_rad = lat * Math.PI / 180;
+
     for (const planet in results) {
         if (planet === 'Earth') continue;
-        const xgeo = results[planet].xeq - earth.xeq;
-        const ygeo = results[planet].yeq - earth.yeq;
-        const zgeo = results[planet].zeq - earth.zeq;
+        
+        let xgeo, ygeo, zgeo;
+        if (planet === 'Sun') {
+            xgeo = results['Sun'].geocentric.xgeo;
+            ygeo = results['Sun'].geocentric.ygeo;
+            zgeo = results['Sun'].geocentric.zgeo;
+        } else {
+            xgeo = results[planet].xeq - earth.xeq;
+            ygeo = results[planet].yeq - earth.yeq;
+            zgeo = results[planet].zeq - earth.zeq;
+            results[planet].geocentric = { xgeo, ygeo, zgeo };
+        }
         
         // Right Ascension and Declination
         let RA = Math.atan2(ygeo, xgeo);
         if (RA < 0) RA += 2 * Math.PI;
         const RA_hours = RA * 24 / (2 * Math.PI);
+        const RA_deg = RA_hours * 15;
         
         const decl = Math.atan2(zgeo, Math.sqrt(xgeo*xgeo + ygeo*ygeo));
         const decl_deg = decl * 180 / Math.PI;
         
-        results[planet].geocentric = { xgeo, ygeo, zgeo };
         results[planet].RA_hours = RA_hours;
         results[planet].decl_deg = decl_deg;
+
+        // Altitude and Azimuth calculations
+        let HA_deg = LST_deg - RA_deg;
+        const HA_rad = HA_deg * Math.PI / 180;
+        
+        const sin_alt = Math.sin(lat_rad) * Math.sin(decl) + Math.cos(lat_rad) * Math.cos(decl) * Math.cos(HA_rad);
+        const alt_rad = Math.asin(sin_alt);
+        const alt_deg = alt_rad * 180 / Math.PI;
+        
+        const cos_az = (Math.sin(decl) - Math.sin(lat_rad) * sin_alt) / (Math.cos(lat_rad) * Math.cos(alt_rad));
+        let az_rad = Math.acos(Math.max(-1, Math.min(1, cos_az))); // Clamp to [-1, 1] to avoid NaN
+        let az_deg = az_rad * 180 / Math.PI;
+        
+        if (Math.sin(HA_rad) > 0) {
+            az_deg = 360 - az_deg;
+        }
+        
+        results[planet].altitude = alt_deg;
+        results[planet].azimuth = az_deg;
     }
+    
     // Calculate Sky Map coordinates
     const sunRA = results['Sun'] ? results['Sun'].RA_hours * 15 : 0;
     // Fractional day from Julian Date (diffDays + 2451545.0)
