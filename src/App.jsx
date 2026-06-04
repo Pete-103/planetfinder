@@ -16,10 +16,20 @@ const getImageSrc = (planet) => {
 };
 
 function App() {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    now.setHours(22, 0, 0, 0);
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  });
   const [planetData, setPlanetData] = useState({});
   const [viewType, setViewType] = useState('Local-Horizon'); // 'Local-Horizon', '2D', '3D-SolarSystem', '3D-CelestialSphere'
   const [selectedEventId, setSelectedEventId] = useState("");
+  const [playbackRate, setPlaybackRate] = useState(0); // Hours per 100ms tick
   
   // Location state
   const [latitude, setLatitude] = useState(0);
@@ -71,6 +81,29 @@ function App() {
       setPlanetData(data);
     }
   }, [date, latitude, longitude]);
+
+  useEffect(() => {
+    if (playbackRate === 0) return;
+    
+    const interval = setInterval(() => {
+      setDate(prevDateStr => {
+        const d = new Date(prevDateStr);
+        if (isNaN(d)) return prevDateStr;
+        
+        // Add playbackRate hours
+        d.setHours(d.getHours() + playbackRate);
+        
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      });
+    }, 2000);
+    
+    return () => clearInterval(interval);
+  }, [playbackRate]);
 
   const handleDateChange = (e) => {
     setDate(e.target.value);
@@ -137,6 +170,13 @@ function App() {
               value={date}
               onChange={handleDateChange}
             />
+            <div className="playback-controls" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', justifyContent: 'center' }}>
+              <button type="button" className="loc-btn" style={{ padding: '0.25rem 0.5rem', minWidth: '40px', background: playbackRate === -24 ? '#3b82f6' : '' }} onClick={() => setPlaybackRate(playbackRate === -24 ? 0 : -24)} title="Fast Backward (-1 day/tick)">⏪</button>
+              <button type="button" className="loc-btn" style={{ padding: '0.25rem 0.5rem', minWidth: '40px', background: playbackRate === -1 ? '#3b82f6' : '' }} onClick={() => setPlaybackRate(playbackRate === -1 ? 0 : -1)} title="Play Backward (-1 hr/tick)">◀️</button>
+              <button type="button" className="loc-btn" style={{ padding: '0.25rem 0.5rem', minWidth: '40px', background: playbackRate === 0 ? '#3b82f6' : '' }} onClick={() => setPlaybackRate(0)} title="Pause">⏸️</button>
+              <button type="button" className="loc-btn" style={{ padding: '0.25rem 0.5rem', minWidth: '40px', background: playbackRate === 1 ? '#3b82f6' : '' }} onClick={() => setPlaybackRate(playbackRate === 1 ? 0 : 1)} title="Play Forward (+1 hr/tick)">▶️</button>
+              <button type="button" className="loc-btn" style={{ padding: '0.25rem 0.5rem', minWidth: '40px', background: playbackRate === 24 ? '#3b82f6' : '' }} onClick={() => setPlaybackRate(playbackRate === 24 ? 0 : 24)} title="Fast Forward (+1 day/tick)">⏩</button>
+            </div>
           </div>
           
           <div className="setting-group location-group">
