@@ -11,7 +11,7 @@ const getImageSrc = (planet) => {
 };
 
 // A single planet mesh
-function Planet({ name, position, scale = 1 }) {
+function Planet({ name, position, scale = 1, setHoveredPlanet }) {
   const textureUrl = getImageSrc(name);
   const texture = useTexture(textureUrl);
   const meshRef = useRef();
@@ -23,10 +23,17 @@ function Planet({ name, position, scale = 1 }) {
     }
   });
 
+  const displayScale = scale * 0.4; // make icons smaller
+
   return (
     <group position={position}>
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[scale, 32, 32]} />
+      <mesh 
+        ref={meshRef}
+        onPointerOver={(e) => { e.stopPropagation(); if (setHoveredPlanet) setHoveredPlanet(name); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { document.body.style.cursor = 'auto'; }}
+        onClick={(e) => { e.stopPropagation(); if (setHoveredPlanet) setHoveredPlanet(name); }}
+      >
+        <sphereGeometry args={[displayScale, 32, 32]} />
         {/* We use MeshStandardMaterial for lighting response, but MeshBasicMaterial is good if we want them to glow */}
         {name === 'Sun' ? (
           <meshBasicMaterial map={texture} />
@@ -36,10 +43,10 @@ function Planet({ name, position, scale = 1 }) {
       </mesh>
       <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
         <Text
-          position={[0, scale + 0.5, 0]}
+          position={[2.0, 1.5, 0]}
           fontSize={0.8}
           color="white"
-          anchorX="center"
+          anchorX="left"
           anchorY="middle"
           outlineWidth={0.05}
           outlineColor="#000"
@@ -57,11 +64,11 @@ const preloadTextures = () => {
   planets.forEach(p => useTexture.preload(getImageSrc(p)));
 };
 
-function SolarSystemGroup({ planetData }) {
+function SolarSystemGroup({ planetData, setHoveredPlanet }) {
   return (
     <group>
       {/* Sun at center */}
-      <Planet name="Sun" position={[0, 0, 0]} scale={1.5} />
+      <Planet name="Sun" position={[0, 0, 0]} scale={1.5} setHoveredPlanet={setHoveredPlanet} />
       {/* Point light from the Sun */}
       <pointLight position={[0, 0, 0]} intensity={2.0} color="#ffffff" distance={200} />
       <ambientLight intensity={0.1} />
@@ -76,19 +83,19 @@ function SolarSystemGroup({ planetData }) {
         const z = -data.yecl * 3;
         const y = data.zecl * 3;
         
-        return <Planet key={planet} name={planet} position={[x, y, z]} scale={0.5} />;
+        return <Planet key={planet} name={planet} position={[x, y, z]} scale={0.5} setHoveredPlanet={setHoveredPlanet} />;
       })}
     </group>
   );
 }
 
-function CelestialSphereGroup({ planetData }) {
+function CelestialSphereGroup({ planetData, setHoveredPlanet }) {
   return (
     <group>
       <ambientLight intensity={1.0} />
       
       {/* Earth at center */}
-      <Planet name="Earth" position={[0, 0, 0]} scale={1} />
+      <Planet name="Earth" position={[0, 0, 0]} scale={1} setHoveredPlanet={setHoveredPlanet} />
 
       {Object.keys(planetData).map(planet => {
         if (planet === 'Earth') return null;
@@ -105,13 +112,13 @@ function CelestialSphereGroup({ planetData }) {
         const z = (-ygeo / dist) * R;
         const y = (zgeo / dist) * R;
         
-        return <Planet key={planet} name={planet} position={[x, y, z]} scale={0.6} />;
+        return <Planet key={planet} name={planet} position={[x, y, z]} scale={0.6} setHoveredPlanet={setHoveredPlanet} />;
       })}
     </group>
   );
 }
 
-export default function ThreeDView({ planetData, viewType }) {
+export default function ThreeDView({ planetData, viewType, setHoveredPlanet }) {
   if (!planetData || Object.keys(planetData).length === 0) return null;
   
   // Trigger preload immediately
@@ -119,16 +126,19 @@ export default function ThreeDView({ planetData, viewType }) {
 
   return (
     <div className="threed-view-container">
-      <Canvas camera={{ position: [0, 10, 20], fov: 60 }}>
+      <Canvas 
+        camera={{ position: [0, 10, 20], fov: 60 }}
+        onPointerMissed={() => setHoveredPlanet && setHoveredPlanet(null)}
+      >
         <color attach="background" args={['#050510']} />
         <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
         
         <OrbitControls makeDefault />
         
         {viewType === '3D-SolarSystem' ? (
-          <SolarSystemGroup planetData={planetData} />
+          <SolarSystemGroup planetData={planetData} setHoveredPlanet={setHoveredPlanet} />
         ) : (
-          <CelestialSphereGroup planetData={planetData} />
+          <CelestialSphereGroup planetData={planetData} setHoveredPlanet={setHoveredPlanet} />
         )}
       </Canvas>
       <div className="threed-overlay-text">

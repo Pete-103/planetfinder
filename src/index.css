@@ -230,7 +230,49 @@ header p {
 }
 
 @media (max-width: 768px) {
+  .app-container {
+    padding: 1rem;
+  }
+  
+  header {
+    margin-bottom: 1.5rem;
+  }
+  
+  header h1 {
+    font-size: 2rem;
+  }
+  
+  header p {
+    font-size: 0.95rem;
+  }
+
   .controls {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .settings-panel {
+    gap: 15px;
+  }
+  
+  .planets-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .planet-header {
     flex-direction: column;
+    text-align: center;
+    gap: 0.8rem;
+  }
+  
+  .planet-icon {
+    width: 80px;
+    height: 80px;
+    box-shadow: 0 0 25px var(--accent-glow);
+  }
+  
+  .planet-name {
+    font-size: 1.8rem;
   }
 }

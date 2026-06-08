@@ -169,6 +169,30 @@ export function calculatePlanetPositions(date, lat = 0, lon = 0) {
         
         results[planet].altitude = alt_deg;
         results[planet].azimuth = az_deg;
+
+        // Magnitude calculation
+        const H_values = {
+            Mercury: -0.6,
+            Venus: -4.4,
+            Mars: -1.5,
+            Jupiter: -9.4,
+            Saturn: -8.9,
+            Uranus: -7.2,
+            Neptune: -6.9
+        };
+        
+        if (H_values[planet]) {
+            const r = Math.sqrt(results[planet].xecl**2 + results[planet].yecl**2 + results[planet].zecl**2);
+            const delta = Math.sqrt(xgeo**2 + ygeo**2 + zgeo**2);
+            const R_earth = Math.sqrt(earth.xecl**2 + earth.yecl**2 + earth.zecl**2);
+            const cosAlpha = (r*r + delta*delta - R_earth*R_earth) / (2 * r * delta);
+            const clampedCosAlpha = Math.max(-1, Math.min(1, cosAlpha));
+            const phaseFn = (1 + clampedCosAlpha) / 2;
+            const phaseTerm = -2.5 * Math.log10(phaseFn + 0.001);
+            results[planet].magnitude = H_values[planet] + 5 * Math.log10(r * delta) + phaseTerm;
+        } else {
+            results[planet].magnitude = 0; // Fallback
+        }
     }
     
     // Calculate Sky Map coordinates
@@ -201,4 +225,32 @@ export function calculatePlanetPositions(date, lat = 0, lon = 0) {
     }
 
     return results;
+}
+
+export function getSunsetTime(baseDate, lat, lon) {
+    const d = new Date(baseDate);
+    // Find solar noon for the given longitude.
+    // Earth rotates 15 degrees per hour.
+    // 0 deg lon = noon at 12:00 UTC.
+    const solarNoonUtcHour = 12 - (lon / 15);
+    
+    // Create a date object for today in UTC at that solar noon
+    const solarNoon = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0));
+    solarNoon.setTime(solarNoon.getTime() + solarNoonUtcHour * 60 * 60 * 1000);
+    
+    let low = solarNoon.getTime();
+    let high = low + 12 * 60 * 60 * 1000; // 12 hours after solar noon
+    
+    let sunsetTime = low;
+    for (let i = 0; i < 20; i++) {
+        const mid = (low + high) / 2;
+        const pos = calculatePlanetPositions(new Date(mid), lat, lon);
+        if (pos['Sun'] && pos['Sun'].altitude > -0.833) {
+            low = mid; 
+        } else {
+            high = mid; 
+        }
+        sunsetTime = mid;
+    }
+    return new Date(sunsetTime);
 }
