@@ -2,7 +2,6 @@ import React, { useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Stars, Text, Billboard, Line } from '@react-three/drei';
 import * as THREE from 'three';
-import './ThreeDView.css';
 
 function getPlanetTexture(planet) {
   const canvas = document.createElement('canvas');
@@ -43,8 +42,9 @@ function ZoomHandler({ controlsRef }) {
   useEffect(() => {
     const updatePolar = (fov) => {
       if (controlsRef && controlsRef.current) {
-        const halfFovRad = THREE.MathUtils.degToRad(fov / 2);
+        const halfFovRad = (fov / 2) * (Math.PI / 180);
         const targetPolar = Math.PI / 2 + halfFovRad;
+        
         controlsRef.current.minPolarAngle = targetPolar;
         controlsRef.current.maxPolarAngle = targetPolar;
         controlsRef.current.update();
@@ -80,7 +80,6 @@ function ZoomHandler({ controlsRef }) {
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
-        // distance ratio to scale FOV. larger pinch distance = zoom in = smaller fov.
         const scale = initialPinchDist / dist;
         const newFov = Math.max(20, Math.min(100, initialFov * scale));
         camera.fov = newFov;
@@ -116,73 +115,9 @@ function ZoomHandler({ controlsRef }) {
   return null;
 }
 
-function CameraController({ planetData, focusPlanets, controlsRef }) {
-  const { camera } = useThree();
-  
-  useEffect(() => {
-    // If no specific planets to focus on (e.g. initial load), do nothing!
-    // The camera will naturally stay at its default position (West).
-    if (!focusPlanets || focusPlanets.length === 0 || !planetData) return;
-    
-    let minAz = Infinity, maxAz = -Infinity;
-    let minAlt = Infinity, maxAlt = -Infinity;
-    let validPlanets = 0;
-    
-    focusPlanets.forEach(p => {
-       const data = planetData[p];
-       if (data && data.altitude !== undefined && data.altitude > -5) {
-          minAz = Math.min(minAz, data.azimuth);
-          maxAz = Math.max(maxAz, data.azimuth);
-          minAlt = Math.min(minAlt, data.altitude);
-          maxAlt = Math.max(maxAlt, data.altitude);
-          validPlanets++;
-       }
-    });
-    
-    if (validPlanets === 0) return;
-    
-    let spreadAz = maxAz - minAz;
-    let centerAz = (minAz + maxAz) / 2;
-    if (spreadAz > 180) {
-       let adjustedMin = Infinity, adjustedMax = -Infinity;
-       focusPlanets.forEach(p => {
-          const data = planetData[p];
-          if (data && data.altitude !== undefined && data.altitude > -5) {
-             let az = data.azimuth;
-             if (az < 180) az += 360;
-             adjustedMin = Math.min(adjustedMin, az);
-             adjustedMax = Math.max(adjustedMax, az);
-          }
-       });
-       spreadAz = adjustedMax - adjustedMin;
-       centerAz = ((adjustedMin + adjustedMax) / 2) % 360;
-    }
-    
-    const azRad = centerAz * (Math.PI / 180);
-    const r = 0.086;
-    const camX = -r * Math.sin(azRad);
-    const camZ = r * Math.cos(azRad);
-    
-    camera.position.set(camX, -0.05, camZ);
-    camera.lookAt(0, 0, 0);
-    
-    const spreadAlt = maxAlt - minAlt;
-    const maxSpread = Math.max(spreadAz, spreadAlt);
-    let newFov = maxSpread + 25; 
-    camera.fov = Math.max(30, Math.min(100, newFov));
-    camera.updateProjectionMatrix();
 
-    if (controlsRef && controlsRef.current) {
-        controlsRef.current.target.set(0, 0, 0);
-        controlsRef.current.update();
-    }
-    
-  }, [focusPlanets, planetData, camera, controlsRef]);
-  
-  return null;
-}
 
-function SkyPlanet({ name, altitude, azimuth, magnitude, radius = 50, isDaytime, setHoveredPlanet, labelOffset = { x: 3.2, y: 3.2, z: 0 } }) {
+function SkyPlanet({ name, altitude, azimuth, magnitude, radius = 50, isDaytime, labelOffset = { x: 3.2, y: 3.2, z: 0 } }) {
   const texture = React.useMemo(() => getPlanetTexture(name), [name]);
   
   const altRad = altitude * (Math.PI / 180);
@@ -193,28 +128,23 @@ function SkyPlanet({ name, altitude, azimuth, magnitude, radius = 50, isDaytime,
   const x = r_xz * Math.sin(azRad);
   const z = -r_xz * Math.cos(azRad);
 
-  let spriteScale = 2.0 / 4;
+  let spriteScale = 3.0 / 4;
   if (name === 'Sun') {
-      spriteScale = 12.0 / 4;
+      spriteScale = 18.0 / 4;
   } else if (name === 'Moon') {
-      spriteScale = 6.0 / 4;
+      spriteScale = 9.0 / 4;
   } else if (magnitude !== undefined) {
-      // True relative brightness: area proportional to 10^(-0.4 * mag) => radius proportional to 10^(-0.2 * mag)
-      const relativeRadius = Math.pow(10, -0.2 * magnitude);
-      // Base scale of 1.5 at magnitude 0, divided by factor of 4
-      spriteScale = Math.max(0.05, (relativeRadius * 1.5) / 4);
+      const relativeRadius = Math.pow(10, -0.1 * magnitude);
+      spriteScale = Math.max(0.05, (relativeRadius * 2.25) / 4);
   }
 
-  const isVisible = !isDaytime || name === 'Sun' || name === 'Moon';
+  const isVisible = (!isDaytime || name === 'Sun' || name === 'Moon') && altitude >= 0;
 
   return (
     <group position={[x, y, z]}>
       <sprite 
         scale={[spriteScale, spriteScale, 1]}
         visible={isVisible}
-        onPointerOver={(e) => { e.stopPropagation(); if (setHoveredPlanet) setHoveredPlanet(name); document.body.style.cursor = 'pointer'; }}
-        onPointerOut={() => { document.body.style.cursor = 'auto'; }}
-        onClick={(e) => { e.stopPropagation(); if (setHoveredPlanet) setHoveredPlanet(name); }}
       >
         <spriteMaterial map={texture} color="#fff" transparent={true} depthWrite={false} />
       </sprite>
@@ -222,8 +152,10 @@ function SkyPlanet({ name, altitude, azimuth, magnitude, radius = 50, isDaytime,
       <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
         <Line 
           points={[[0, 0, 0], [labelOffset.x - 0.2, labelOffset.y, labelOffset.z]]} 
-          color={isDaytime ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)"} 
-          lineWidth={1} 
+          color={isDaytime ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)"} 
+          lineWidth={2} 
+          depthTest={false}
+          renderOrder={1}
         />
         <Text
           position={[labelOffset.x, labelOffset.y, labelOffset.z]}
@@ -234,6 +166,8 @@ function SkyPlanet({ name, altitude, azimuth, magnitude, radius = 50, isDaytime,
           outlineWidth={isDaytime ? 0 : 0.1}
           outlineColor="#000"
           fontWeight={isDaytime ? "bold" : "normal"}
+          depthTest={false}
+          renderOrder={1}
         >
           {name}
         </Text>
@@ -247,12 +181,12 @@ function GroundAndCompass({ radius = 50 }) {
     <group>
       <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0, radius * 2, 64]} />
-        <meshBasicMaterial color="#081018" />
+        <meshBasicMaterial color="#081018" transparent={true} opacity={0.6} />
       </mesh>
       
       <mesh position={[0, -5.1, 0]}>
         <cylinderGeometry args={[radius * 2, radius * 2, 10, 64]} />
-        <meshBasicMaterial color="#050a0f" />
+        <meshBasicMaterial color="#050a0f" transparent={true} opacity={0.6} />
       </mesh>
 
       {/* Compass Markers */}
@@ -274,7 +208,7 @@ function GroundAndCompass({ radius = 50 }) {
   );
 }
 
-const LocalSkyView = ({ planetData, focusPlanets, setHoveredPlanet }) => {
+const LocalSkyView = ({ planetData }) => {
   const planetsList = Object.keys(planetData).filter(p => p !== 'Earth');
   const sunData = planetData['Sun'];
   const sunAlt = sunData ? sunData.altitude : 0;
@@ -360,10 +294,7 @@ const LocalSkyView = ({ planetData, focusPlanets, setHoveredPlanet }) => {
         Position [0.086, -0.05, 0] means X is positive (East), looking at origin (0,0,0). 
         Looking from East to Origin points the camera exactly West.
       */}
-      <Canvas 
-        camera={{ position: [0.086, -0.05, 0], fov: 60 }}
-        onPointerMissed={() => setHoveredPlanet && setHoveredPlanet(null)}
-      >
+      <Canvas camera={{ position: [0.086, -0.05, 0], fov: 60 }}>
         <color attach="background" args={[skyColorStr]} />
         
         {sunAlt < 5 && (
@@ -381,19 +312,19 @@ const LocalSkyView = ({ planetData, focusPlanets, setHoveredPlanet }) => {
           rotateSpeed={-0.5}
           enableDamping={true}
           dampingFactor={0.05}
-          minPolarAngle={Math.PI / 2}
+          minPolarAngle={0}
           maxPolarAngle={Math.PI}
         />
         
         <ZoomHandler controlsRef={controlsRef} />
-        <CameraController planetData={planetData} focusPlanets={focusPlanets} controlsRef={controlsRef} />
 
         <GroundAndCompass radius={50} />
 
         {planetsList.map(planet => {
           const data = planetData[planet];
           if (!data || data.altitude === undefined) return null;
-          if (data.altitude < -5) return null;
+          
+          if (data.altitude < 0) return null;
 
           return (
             <SkyPlanet 
@@ -404,7 +335,6 @@ const LocalSkyView = ({ planetData, focusPlanets, setHoveredPlanet }) => {
               magnitude={data.magnitude}
               radius={50} 
               isDaytime={isDaytime}
-              setHoveredPlanet={setHoveredPlanet}
               labelOffset={labelOffsets[planet] || { x: 3.2, y: 3.2, z: 0 }}
             />
           );

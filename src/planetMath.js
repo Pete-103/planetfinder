@@ -155,12 +155,18 @@ export function calculatePlanetPositions(date, lat = 0, lon = 0) {
         let HA_deg = LST_deg - RA_deg;
         const HA_rad = HA_deg * Math.PI / 180;
         
-        const sin_alt = Math.sin(lat_rad) * Math.sin(decl) + Math.cos(lat_rad) * Math.cos(decl) * Math.cos(HA_rad);
+        let sin_alt = Math.sin(lat_rad) * Math.sin(decl) + Math.cos(lat_rad) * Math.cos(decl) * Math.cos(HA_rad);
+        sin_alt = Math.max(-1, Math.min(1, sin_alt));
         const alt_rad = Math.asin(sin_alt);
         const alt_deg = alt_rad * 180 / Math.PI;
         
-        const cos_az = (Math.sin(decl) - Math.sin(lat_rad) * sin_alt) / (Math.cos(lat_rad) * Math.cos(alt_rad));
-        let az_rad = Math.acos(Math.max(-1, Math.min(1, cos_az))); // Clamp to [-1, 1] to avoid NaN
+        const denominator = Math.cos(lat_rad) * Math.cos(alt_rad);
+        let cos_az = 0;
+        if (Math.abs(denominator) > 1e-10) {
+            cos_az = (Math.sin(decl) - Math.sin(lat_rad) * sin_alt) / denominator;
+        }
+        cos_az = Math.max(-1, Math.min(1, cos_az)); // Clamp to [-1, 1]
+        let az_rad = Math.acos(cos_az); 
         let az_deg = az_rad * 180 / Math.PI;
         
         if (Math.sin(HA_rad) > 0) {
@@ -195,34 +201,6 @@ export function calculatePlanetPositions(date, lat = 0, lon = 0) {
         }
     }
     
-    // Calculate Sky Map coordinates
-    const sunRA = results['Sun'] ? results['Sun'].RA_hours * 15 : 0;
-    // Fractional day from Julian Date (diffDays + 2451545.0)
-    // Note: diffDays = (date - J2000) / ms_per_day. J2000 is noon, so diffDays is exact.
-    // Excel used B41 - ROUNDDOWN(B41, 0) which is just the fractional part of the current date.
-    // For a JavaScript Date object, we can just use the local time fraction or UTC time fraction.
-    // Since the original spreadsheet used local time (NOW()), we'll use local time fraction.
-    const timeOfDay = (date.getHours() + date.getMinutes()/60 + date.getSeconds()/3600) / 24.0;
-    const easternHorizonRaw = sunRA + 360 * (timeOfDay - 0.25);
-    
-    // Normalize Eastern Horizon to 0-360
-    let easternHorizon = easternHorizonRaw % 360;
-    if (easternHorizon < 0) easternHorizon += 360;
-
-    for (const planet in results) {
-        if (planet === 'Earth') continue;
-        
-        const planetRA = results[planet].RA_hours * 15;
-        let diff = easternHorizon - planetRA;
-        
-        // Wrap difference to -180 to 180
-        diff = ((diff + 180) % 360 + 360) % 360 - 180;
-        
-        // Calculate X and Y coordinates for the map (-1 to 1)
-        const rad = diff * Math.PI / 180;
-        results[planet].mapX = Math.cos(rad);
-        results[planet].mapY = Math.sin(rad);
-    }
 
     return results;
 }
