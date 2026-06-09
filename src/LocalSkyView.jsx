@@ -43,7 +43,8 @@ function ZoomHandler({ controlsRef }) {
     const updatePolar = (fov) => {
       if (controlsRef && controlsRef.current) {
         const halfFovRad = (fov / 2) * (Math.PI / 180);
-        const targetPolar = Math.PI / 2 + halfFovRad;
+        // Show some ground so compass markers appear higher up on the screen
+        const targetPolar = Math.PI / 2 + halfFovRad * 0.7;
         
         controlsRef.current.minPolarAngle = targetPolar;
         controlsRef.current.maxPolarAngle = targetPolar;
