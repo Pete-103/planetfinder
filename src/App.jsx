@@ -17,6 +17,7 @@ function App() {
   });
   const [planetData, setPlanetData] = useState({});
   const [playbackRate, setPlaybackRate] = useState(0); // Hours per 100ms tick
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Location state
   const [latitude, setLatitude] = useState(0);
@@ -44,11 +45,16 @@ function App() {
           const seconds = String(sunset.getSeconds()).padStart(2, '0');
           const ms = String(sunset.getMilliseconds()).padStart(3, '0');
           setDate(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}`);
+          setIsInitialized(true);
         },
         (error) => {
           console.warn("Initial location fetch failed or denied.", error);
-        }
+          setIsInitialized(true);
+        },
+        { timeout: 10000 }
       );
+    } else {
+      setIsInitialized(true);
     }
   }, []);
 
@@ -134,6 +140,10 @@ function App() {
     if (name === 'latitude') setLatitude(value);
     if (name === 'longitude') setLongitude(value);
   };
+
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <div className="app-container">
